@@ -1,0 +1,12 @@
+[general]
+name=gis_aspb
+qgisMinimumVersion=3.0
+description=Importa capas i calcular similituds
+version=0.1
+author=PSIG
+email=admin@psig.es
+tags=python
+category=Plugins
+icon=icones/icon.png
+experimental=False
+deprecated=False
