@@ -302,6 +302,7 @@ class gis_aspb:
             self.Avis("Selecciona una taula per poder calcular la similitud")
             return
         nombre_tabla = self.dlg.comboBox_selectTable.currentText()
+        carrerer_tabla = self.gis_aspb_db.get_metadata_parameter("app", "carrerer")
 
         # Initialize clauses
         tipo_clause = ""
@@ -347,14 +348,14 @@ class gis_aspb:
             return
 
         sql = (f"CREATE EXTENSION IF NOT EXISTS unaccent;"
-            f"CREATE EXTENSION IF NOT EXISTS pg_trgm;" 
+            f"CREATE EXTENSION IF NOT EXISTS pg_trgm;"
             f"ALTER TABLE similitud.{nombre_tabla} ADD COLUMN IF NOT EXISTS geom geometry(Point, 25831);"
             f"ALTER TABLE similitud.{nombre_tabla} ADD COLUMN IF NOT EXISTS similarity real;"
             f"UPDATE similitud.{nombre_tabla} AS c SET (geom, similarity) = ("
             f"SELECT a.geom, similarity("
             f"({tipo_clause} unaccent(COALESCE(c.{nomVia}, '')) {numPortal_clause}), "
             f"(unaccent(COALESCE(a.nom_via, '')) || ', ' || COALESCE(a.literal, ''))) " 
-            f"FROM carrerer.adreces AS a WHERE similarity("
+            f"FROM {carrerer_tabla} AS a WHERE similarity("
             f"({tipo_compare_clause} unaccent(COALESCE(c.{nomVia}, '')) {numPortal_compare_clause}), "
             f"(unaccent(COALESCE(a.nom_via, '')) || ', ' || COALESCE(a.literal, ''))) > {coef} "
             f"ORDER BY similarity("
