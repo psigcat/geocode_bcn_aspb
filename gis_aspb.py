@@ -146,10 +146,10 @@ class gis_aspb:
             self.dlg.cancelButton.clicked.connect(self.cleanFormClac)
             # Connect the acept button to the calc function
             self.dlg.aceptButton.clicked.connect(self.calcSimilarity)
-            # Set up the validator for lineEdit_coef
-            validator = QDoubleValidator(0.1, 0.999999, 6, self.dlg)
-            validator.setNotation(QDoubleValidator.StandardNotation)
-            self.dlg.lineEdit_coef.setValidator(validator)
+            # Set up the validator for spin_coef
+            # validator = QDoubleValidator(0.1, 0.999999, 6, self.dlg)
+            # validator.setNotation(QDoubleValidator.StandardNotation)
+            # self.dlg.spin_coef.setValidator(validator)
 
         # Call function 'getLayersProjectActive()'
         self.getLayersProjectActive()
@@ -337,7 +337,7 @@ class gis_aspb:
             numPortal_where_clause = f" AND c.{numPortal} IS NOT NULL"
 
         # Check if coef is a correct input
-        coeficient = self.dlg.lineEdit_coef.text()
+        coeficient = self.dlg.spin_coef.value()
         try:
             coef = float(coeficient)
             if coef < 0.1 or coef >= 1:
@@ -440,7 +440,7 @@ class gis_aspb:
         self.dlg.comboBox_tipos.setCurrentIndex(0)
         self.dlg.comboBox_nomVia.setCurrentIndex(0)
         self.dlg.comboBox_numPortal.setCurrentIndex(0)
-        self.dlg.lineEdit_coef.setText("")
+        self.dlg.spin_coef.clear()
 
 
     def cleanFormImport(self):
