@@ -1,14 +1,14 @@
 import os
+import configparser
 
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 
 
 class GisAspbDB:
 
-	def __init__(self, plugin_dir, config_file="GisAspb.conf"):
+	def __init__(self, plugin_dir):
 
 		self.plugin_dir = plugin_dir
-		self.config_file = config_file
 		self.param = {}
 		self.db = None
 		self.obert = False
@@ -22,33 +22,38 @@ class GisAspbDB:
 	def LlegirConfig(self):
 		""" llegir arxiu configuracio """
 
-		filepath = os.path.join(self.plugin_dir, self.config_file)
-		if not os.path.exists(filepath):
-			return
-		file = open(filepath, "r")
-		if file.closed:
-			return
+		# temporary fix to save params from metadata.txt
+		self.param = {
+			"host": self.get_metadata_parameter("app", "host"),
+			"database": self.get_metadata_parameter("app", "database"),
+			"port": self.get_metadata_parameter("app", "port"),
+			"user": self.get_metadata_parameter("app", "user"),
+			"password": self.get_metadata_parameter("app", "password"),
+			"service": self.get_metadata_parameter("app", "service"),
+			"schema": self.get_metadata_parameter("app", "schema")
+		}
+		if self.param["schema"]:
+			self.param["search_path"] = self.param["schema"]
 
-		params = ["host", "database", "port", "user", "password", "service", "schema"]
-		for i in params:
-			self.param[i] = ""
-		for reg in file:
-			if reg.startswith("host="):
-				self.param["host"] = str(reg.split("host=")[1]).strip()
-			if reg.startswith("database="):
-				self.param["database"] = str(reg.split("database=")[1]).strip()
-			if reg.startswith("port="):
-				self.param["port"] = str(reg.split("port=")[1]).strip()
-			if reg.startswith("user="):
-				self.param["user"] = str(reg.split("user=")[1]).strip()
-			if reg.startswith("password="):
-				self.param["password"] = str(reg.split("password=")[1]).strip()
-			if reg.startswith("service="):
-				self.param["service"] = str(reg.split("service=")[1]).strip()
-			if reg.startswith("schema="):
-				self.param["schema"] = str(reg.split("schema=")[1]).strip()
-				self.param["search_path"] = self.param["schema"]
-		file.close()
+
+	def get_metadata_parameter(self, section="general", parameter="version", file="metadata.txt"):
+		""" Get parameter value from Metadata """
+
+		# Check if metadata file exists
+		metadata_file = os.path.join(self.plugin_dir, file)
+		if not os.path.exists(metadata_file):
+			show_warning(f"No s'ha trobat l'arxiu de metadades: {metadata_file}")
+			return None
+
+		value = None
+		try:
+			metadata = configparser.ConfigParser()
+			metadata.read(metadata_file)
+			value = metadata.get(section, parameter)
+		except Exception as e:
+			show_warning(e)
+		finally:
+			return value
 
 
 	def ObrirBaseDades(self):

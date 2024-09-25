@@ -12,6 +12,8 @@ from .gis_aspb_db import GisAspbDB
 from .gis_aspb_dialog import gis_aspbDialog
 import os.path
 import json
+#from geocodeaspb_utils import get_metadata_parameter
+
 
 class gis_aspb:
     """QGIS Plugin Implementation."""
@@ -207,17 +209,18 @@ class gis_aspb:
 
         # Get database connection parameters
         db_params = self.gis_aspb_db.param
-        service = db_params.get('service', '')
+        database = db_params.get('database', '')
+        schema = db_params.get('schema', '')
 
-        if not service:
-            self.Avis("Falta el servei de connexió a la base de dades.")
+        if not database or not schema:
+            self.Avis("Falta la definició de la base de dades i del schema.")
             return
 
         # Use processing algorithm to import layer into PostgreSQL/PostGIS
         alg_params = {
             'INPUT': layer,
-            'DATABASE': service,
-            'SCHEMA': 'similitud',
+            'DATABASE': database,
+            'SCHEMA': schema,
             'TABLENAME': table_name,
             'PRIMARY_KEY': 'id',
             'GEOMETRY_COLUMN': 'geom',
