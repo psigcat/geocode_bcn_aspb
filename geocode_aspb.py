@@ -2,7 +2,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 from PyQt5.QtWidgets import QMessageBox
-from qgis.core import QgsProject, QgsVectorLayer, QgsProcessingFeedback
+from qgis.core import QgsProject, QgsVectorLayer, QgsProcessingFeedback, Qgis
 from PyQt5.QtGui import QDoubleValidator
 import processing
 # Import the code for the dialog
@@ -158,12 +158,13 @@ class geocode_aspb:
         self.db = self.geocode_aspb_db.ObrirBaseDades()
         if self.geocode_aspb_db.bd_open:
             if not self.geocode_aspb_db.SetSearchPath():
-                self.Avis(self.geocode_aspb_db.last_error)
+                self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr(self.geocode_aspb_db.last_error), level=Qgis.Warning, duration=3)
+
                 return
             self.param = self.geocode_aspb_db.param
             self.getTablesCalc()
         else:
-            self.Avis(self.geocode_aspb_db.last_error)
+            self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr(self.geocode_aspb_db.last_error), level=Qgis.Warning, duration=3)
 
         # show the dialog
         self.dlg.show()
@@ -187,10 +188,11 @@ class geocode_aspb:
 
         # Check mandatory fields
         if self.dlg.comboBox_selecLayer.currentText() == "":
-            self.Avis("S'ha de seleccionar una capa del projecte")
+            self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr("S'ha de seleccionar una capa del projecte"), level=Qgis.Warning, duration=3)
+
             return
         if self.dlg.lineEdit_nameTable.text() == "":
-            self.Avis("S'ha de indicar un nom per la taula a importa")
+            self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr("S'ha de indicar un nom per la taula a importa"), level=Qgis.Warning, duration=3)
             return
 
         layer_name = self.dlg.comboBox_selecLayer.currentText()
@@ -198,11 +200,11 @@ class geocode_aspb:
         layer = QgsProject.instance().mapLayersByName(layer_name)[0]
 
         if not isinstance(layer, QgsVectorLayer):
-            self.Avis("La capa seleccionada no es una capa vectorial.")
+            self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr("La capa seleccionada no es una capa vectorial."), level=Qgis.Warning, duration=3)
             return
 
         if not self.geocode_aspb_db or not self.geocode_aspb_db.bd_open:
-            self.Avis("La base de dades no està oberta.")
+            self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr("La base de dades no està oberta."), level=Qgis.Warning, duration=3)
             return
 
         # Get database connection parameters
@@ -212,7 +214,7 @@ class geocode_aspb:
         schema = db_params.get('schema', '')
 
         if not database or not schema:
-            self.Avis("Falta la definició de la base de dades i del schema.")
+            self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr("Falta la definició de la base de dades i del schema."), level=Qgis.Warning, duration=3)
             return
 
         # Use processing algorithm to import layer into PostgreSQL/PostGIS
@@ -234,12 +236,12 @@ class geocode_aspb:
         feedback = QgsProcessingFeedback()
         try:
             processing.run('native:importintopostgis', alg_params, feedback=feedback)
-            self.Avis("Capa importada correctament a la base de dades.", "I")
+            self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr("Capa importada correctament a la base de dades."), level=Qgis.Success, duration=3)
             self.cleanTable(table_name)
             self.cleanFormImport()
             self.getTablesCalc()
         except Exception as e:
-            self.Avis(f"Error en importar la capa: {str(e)}", "C")
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(f"Error en importar la capa: {str(e)}"), level=Qgis.Error, duration=3)
 
 
     def cleanTable(self, table_name):
@@ -265,7 +267,7 @@ class geocode_aspb:
         rows = self.geocode_aspb_db.get_rows(sql)
         if rows is None:
             msg= f"Error en la carega de les taules\n\n{self.geocode_aspb_db.last_error}"
-            self.Avis(msg) if self.geocode_aspb_db.last_error else self.show_info(self.geocode_aspb_db.last_msg)
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Error, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
             return
         
         self.dlg.comboBox_selectTable.addItem("","")
@@ -292,7 +294,7 @@ class geocode_aspb:
         rows = self.geocode_aspb_db.get_rows(sql)
         if rows is None:
             msg= f"Error en la carega dels elements de la tula\n\n{self.geocode_aspb_db.last_error}"
-            self.Avis(msg) if self.geocode_aspb_db.last_error else self.show_info(self.geocode_aspb_db.last_msg)
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Error, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
             return
         
         self.dlg.comboBox_tipos.addItem("","")
@@ -310,7 +312,7 @@ class geocode_aspb:
 
         # Check selected table
         if self.dlg.comboBox_selectTable.currentText() == "":
-            self.Avis("Selecciona una taula per poder calcular la similitud")
+            self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr("Selecciona una taula per poder calcular la similitud"), level=Qgis.Warning, duration=3)
             return
         nombre_tabla = self.dlg.comboBox_selectTable.currentText()
         carrerer_tabla = self.geocode_aspb_db.get_metadata_parameter("app", "carrerer")
@@ -332,7 +334,7 @@ class geocode_aspb:
         if self.dlg.comboBox_nomVia.currentText() != "":
             nomVia = self.dlg.comboBox_nomVia.currentText()
         else:
-            self.Avis("La opció de nom via és obligatòria")
+            self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr("La opció de nom via és obligatòria"), level=Qgis.Warning, duration=3)
             return
 
         # Initialize clauses
@@ -352,10 +354,10 @@ class geocode_aspb:
         try:
             coef = float(coeficient)
             if coef < 0.1 or coef >= 1:
-                self.Avis("El coeficient ha d'estar entre 0.1 i 1")
+                self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr("El coeficient ha d'estar entre 0.1 i 1"), level=Qgis.Warning, duration=3)
                 return
         except ValueError:
-            self.Avis("El coeficient ha de ser un número vàlid entre 0.1 i 1")
+            self.dlg.messageBar.pushMessage(self.tr("Warning"), self.tr("El coeficient ha de ser un número vàlid entre 0.1 i 1"), level=Qgis.Warning, duration=3)
             return
 
         sql = (f"CREATE EXTENSION IF NOT EXISTS unaccent;"
@@ -379,12 +381,12 @@ class geocode_aspb:
         success = self.geocode_aspb_db.exec_sql(sql)
         if not success:
             msg = f"Error \n\n{self.geocode_aspb_db.last_error}"
-            self.Avis(msg) if self.geocode_aspb_db.last_error else self.show_info(self.geocode_aspb_db.last_msg)
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Error, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
             print(self.geocode_aspb_db.last_error)
             return
         
         print("Query executed successfully.")
-        self.Avis("El clacul a finalitzat", "i")
+        self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr("El clacul a finalitzat"), level=Qgis.Success, duration=3)
         self.cleanFormCalc()
 
 
@@ -396,7 +398,7 @@ class geocode_aspb:
         try: 
             diccionarioTipos = self.cargar_diccionarioTipos(file_path)
         except FileNotFoundError as e:
-            self.Avis(str(e))
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(str(e)), level=Qgis.Error, duration=3)
             return
 
         sql = (f"SELECT id, {colTipo} FROM {nombre_tabla};")
@@ -404,7 +406,7 @@ class geocode_aspb:
         rows = self.geocode_aspb_db.get_rows(sql)
         if rows is None:
             msg= f"Error en la carega de la columna de tipus\n\n{self.geocode_aspb_db.last_error}"
-            self.Avis(msg) if self.geocode_aspb_db.last_error else self.show_info(self.geocode_aspb_db.last_msg)
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Error, duration=3)
             return 
         
         cambios = []
@@ -424,7 +426,7 @@ class geocode_aspb:
 
             if not success:
                 msg = f"Error al actualitzar el tipus de via amb id: {id}\n\n{self.geocode_aspb_db.last_error}"
-                self.Avis(msg) if self.geocode_aspb_db.last_error else sel.show_info(self.geocode_aspb_db.last_msg)
+                self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Error, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
         
         print("actualizacion completada")
 
