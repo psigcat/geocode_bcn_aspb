@@ -141,7 +141,7 @@ class geocode_aspb:
             # Connect the signal currentIndexChanged of comboBox_selectTable to charge elements og the table
             self.dlg.comboBox_selectTable.currentIndexChanged.connect(self.chargeTableElements)
             # Connect the cancel button to the cancel function
-            self.dlg.cancelButton.clicked.connect(self.cleanFormClac)
+            self.dlg.cancelButton.clicked.connect(self.cleanFormCalc)
             # Connect the acept button to the calc function
             self.dlg.aceptButton.clicked.connect(self.calcSimilarity)
             # Set up the validator for spin_coef
@@ -231,15 +231,27 @@ class geocode_aspb:
             'LOWERCASE_NAMES': True
         }
         
-
         feedback = QgsProcessingFeedback()
         try:
             processing.run('native:importintopostgis', alg_params, feedback=feedback)
             self.Avis("Capa importada correctament a la base de dades.", "I")
+            self.cleanTable(table_name)
             self.cleanFormImport()
             self.getTablesCalc()
         except Exception as e:
             self.Avis(f"Error en importar la capa: {str(e)}", "C")
+
+
+    def cleanTable(self, table_name):
+        """ Remove columns geom and similarity """
+
+        sql = (f"ALTER TABLE similitud.{table_name} DROP COLUMN geom, DROP COLUMN similarity;")
+        success = self.geocode_aspb_db.exec_sql(sql)
+        # if not success:
+        #     msg = f"Error \n\n{self.geocode_aspb_db.last_error}"
+        #     self.Avis(msg) if self.geocode_aspb_db.last_error else self.show_info(self.geocode_aspb_db.last_msg)
+        #     print(self.geocode_aspb_db.last_error)
+        #     return
 
 
     def getTablesCalc(self):
@@ -311,7 +323,7 @@ class geocode_aspb:
         # Check if comboBox_tipos has an item selected
         if self.dlg.comboBox_tipos.currentText() != "":
             tipo = self.dlg.comboBox_tipos.currentText()
-            self.chekTipos(tipo, nombre_tabla)
+            self.checkTipos(tipo, nombre_tabla)
             tipo_clause = f"c.{tipo} || ' ' || "
             tipo_compare_clause = f"c.{tipo} || ' ' || "
             tipo_where_clause = f" AND c.{tipo} IS NOT NULL"
@@ -373,10 +385,10 @@ class geocode_aspb:
         
         print("Query executed successfully.")
         self.Avis("El clacul a finalitzat", "i")
-        self.cleanFormClac()
+        self.cleanFormCalc()
 
 
-    def chekTipos(self, colTipo, nombre_tabla):
+    def checkTipos(self, colTipo, nombre_tabla):
         """ Check and change the type like adrecces """
         
         file_path = os.path.join(os.path.dirname(__file__), 'diccionarioTipos.json')
@@ -432,7 +444,7 @@ class geocode_aspb:
         return diccionarioTipos
 
 
-    def cleanFormClac(self):
+    def cleanFormCalc(self):
         """ Clean the calc form """
 
         self.getTablesCalc() 
