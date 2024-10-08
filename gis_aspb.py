@@ -5,8 +5,6 @@ from PyQt5.QtWidgets import QMessageBox
 from qgis.core import QgsProject, QgsVectorLayer, QgsProcessingFeedback
 from PyQt5.QtGui import QDoubleValidator
 import processing
-# Initialize Qt resources from file resources.py
-from .resources import *
 # Import the code for the dialog
 from .gis_aspb_db import GisAspbDB
 from .gis_aspb_dialog import gis_aspbDialog
