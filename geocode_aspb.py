@@ -6,15 +6,15 @@ from qgis.core import QgsProject, QgsVectorLayer, QgsProcessingFeedback
 from PyQt5.QtGui import QDoubleValidator
 import processing
 # Import the code for the dialog
-from .gis_aspb_db import GisAspbDB
-from .gis_aspb_dialog import gis_aspbDialog
+from .geocode_aspb_db import GisAspbDB
+from .geocode_aspb_dialog import geocode_aspbDialog
 import os.path
 import json
 #from geocodeaspb_utils import get_metadata_parameter
 
 
-class gis_aspb:
-    """QGIS Plugin Implementation."""
+class geocode_aspb:
+    """QGIS Plugin Implementation.º"""
 
     def __init__(self, iface):
         """Constructor.
@@ -24,7 +24,7 @@ class gis_aspb:
             application at run time.
         :type iface: QgsInterface
         """
-        self.gis_aspb_db = None
+        self.geocode_aspb_db = None
         # Save reference to the QGIS interface
         self.iface = iface
         # initialize plugin directory
@@ -34,7 +34,7 @@ class gis_aspb:
         locale_path = os.path.join(
             self.plugin_dir,
             'i18n',
-            'gis_aspb_{}.qm'.format(locale))
+            'geocode_aspb_{}.qm'.format(locale))
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -43,7 +43,7 @@ class gis_aspb:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&gis_aspb')
+        self.menu = self.tr(u'&geocode_aspb')
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
@@ -62,7 +62,7 @@ class gis_aspb:
         :rtype: QString
         """
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-        return QCoreApplication.translate('gis_aspb', message)
+        return QCoreApplication.translate('geocode_aspb', message)
 
 
     def add_action(
@@ -118,14 +118,14 @@ class gis_aspb:
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
-            self.iface.removePluginMenu(self.tr(u'&gis_aspb'), action)
+            self.iface.removePluginMenu(self.tr(u'&geocode_aspb'), action)
             self.iface.removeToolBarIcon(action)
         
         # Close DDBB
-        if self.gis_aspb_db:
-            self.gis_aspb_db.TancarBaseDades()
-        self.gis_aspb_db = None
-        del self.gis_aspb_db
+        if self.geocode_aspb_db:
+            self.geocode_aspb_db.TancarBaseDades()
+        self.geocode_aspb_db = None
+        del self.geocode_aspb_db
 
 
     def run(self):
@@ -135,7 +135,7 @@ class gis_aspb:
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start == True:
             self.first_start = False
-            self.dlg = gis_aspbDialog()
+            self.dlg = geocode_aspbDialog()
             # Connect the import button to the import function
             self.dlg.import_button.clicked.connect(self.importLayer)
             # Connect the signal currentIndexChanged of comboBox_selectTable to charge elements og the table
@@ -153,17 +153,17 @@ class gis_aspb:
         self.getLayersProjectActive()
 
         # Connect DDBB
-        self.gis_aspb_db = GisAspbDB(self.plugin_dir)
-        self.gis_aspb_db.LlegirConfig()
-        self.db = self.gis_aspb_db.ObrirBaseDades()
-        if self.gis_aspb_db.bd_open:
-            if not self.gis_aspb_db.SetSearchPath():
-                self.Avis(self.gis_aspb_db.last_error)
+        self.geocode_aspb_db = GisAspbDB(self.plugin_dir)
+        self.geocode_aspb_db.LlegirConfig()
+        self.db = self.geocode_aspb_db.ObrirBaseDades()
+        if self.geocode_aspb_db.bd_open:
+            if not self.geocode_aspb_db.SetSearchPath():
+                self.Avis(self.geocode_aspb_db.last_error)
                 return
-            self.param = self.gis_aspb_db.param
+            self.param = self.geocode_aspb_db.param
             self.getTablesCalc()
         else:
-            self.Avis(self.gis_aspb_db.last_error)
+            self.Avis(self.geocode_aspb_db.last_error)
 
         # show the dialog
         self.dlg.show()
@@ -201,12 +201,12 @@ class gis_aspb:
             self.Avis("La capa seleccionada no es una capa vectorial.")
             return
 
-        if not self.gis_aspb_db or not self.gis_aspb_db.bd_open:
+        if not self.geocode_aspb_db or not self.geocode_aspb_db.bd_open:
             self.Avis("La base de dades no està oberta.")
             return
 
         # Get database connection parameters
-        db_params = self.gis_aspb_db.param
+        db_params = self.geocode_aspb_db.param
         database = db_params.get('database', '')
         schema = db_params.get('schema', '')
 
@@ -249,10 +249,10 @@ class gis_aspb:
         sql = ("SELECT table_name FROM information_schema.tables WHERE table_schema = 'similitud' "
                "AND table_type = 'BASE TABLE';")
 
-        rows = self.gis_aspb_db.get_rows(sql)
+        rows = self.geocode_aspb_db.get_rows(sql)
         if rows is None:
-            msg= f"Error en la carega de les taules\n\n{self.gis_aspb_db.last_error}"
-            self.Avis(msg) if self.gis_aspb_db.last_error else self.show_info(self.gis_aspb_db.last_msg)
+            msg= f"Error en la carega de les taules\n\n{self.geocode_aspb_db.last_error}"
+            self.Avis(msg) if self.geocode_aspb_db.last_error else self.show_info(self.geocode_aspb_db.last_msg)
             return
         
         self.dlg.comboBox_selectTable.addItem("","")
@@ -276,10 +276,10 @@ class gis_aspb:
         sql = (f"SELECT column_name FROM information_schema.columns WHERE table_schema = 'similitud' "
                f"AND table_name = '{nombre_tabla}';")
 
-        rows = self.gis_aspb_db.get_rows(sql)
+        rows = self.geocode_aspb_db.get_rows(sql)
         if rows is None:
-            msg= f"Error en la carega dels elements de la tula\n\n{self.gis_aspb_db.last_error}"
-            self.Avis(msg) if self.gis_aspb_db.last_error else self.show_info(self.gis_aspb_db.last_msg)
+            msg= f"Error en la carega dels elements de la tula\n\n{self.geocode_aspb_db.last_error}"
+            self.Avis(msg) if self.geocode_aspb_db.last_error else self.show_info(self.geocode_aspb_db.last_msg)
             return
         
         self.dlg.comboBox_tipos.addItem("","")
@@ -300,7 +300,7 @@ class gis_aspb:
             self.Avis("Selecciona una taula per poder calcular la similitud")
             return
         nombre_tabla = self.dlg.comboBox_selectTable.currentText()
-        carrerer_tabla = self.gis_aspb_db.get_metadata_parameter("app", "carrerer")
+        carrerer_tabla = self.geocode_aspb_db.get_metadata_parameter("app", "carrerer")
 
         # Initialize clauses
         tipo_clause = ""
@@ -363,11 +363,11 @@ class gis_aspb:
             f"{tipo_where_clause} "
             f"{numPortal_where_clause};")
         
-        success = self.gis_aspb_db.exec_sql(sql)
+        success = self.geocode_aspb_db.exec_sql(sql)
         if not success:
-            msg = f"Error \n\n{self.gis_aspb_db.last_error}"
-            self.Avis(msg) if self.gis_aspb_db.last_error else self.show_info(self.gis_aspb_db.last_msg)
-            print(self.gis_aspb_db.last_error)
+            msg = f"Error \n\n{self.geocode_aspb_db.last_error}"
+            self.Avis(msg) if self.geocode_aspb_db.last_error else self.show_info(self.geocode_aspb_db.last_msg)
+            print(self.geocode_aspb_db.last_error)
             return
         
         print("Query executed successfully.")
@@ -388,10 +388,10 @@ class gis_aspb:
 
         sql = (f"SELECT id, {colTipo} FROM {nombre_tabla};")
         
-        rows = self.gis_aspb_db.get_rows(sql)
+        rows = self.geocode_aspb_db.get_rows(sql)
         if rows is None:
-            msg= f"Error en la carega de la columna de tipus\n\n{self.gis_aspb_db.last_error}"
-            self.Avis(msg) if self.gis_aspb_db.last_error else self.show_info(self.gis_aspb_db.last_msg)
+            msg= f"Error en la carega de la columna de tipus\n\n{self.geocode_aspb_db.last_error}"
+            self.Avis(msg) if self.geocode_aspb_db.last_error else self.show_info(self.geocode_aspb_db.last_msg)
             return 
         
         cambios = []
@@ -407,11 +407,11 @@ class gis_aspb:
 
         for nuevo_valor, id in cambios:
             sql = f"UPDATE {nombre_tabla} SET {colTipo} = '{nuevo_valor}' WHERE id = {id};"
-            success = self.gis_aspb_db.exec_sql(sql)
+            success = self.geocode_aspb_db.exec_sql(sql)
 
             if not success:
-                msg = f"Error al actualitzar el tipus de via amb id: {id}\n\n{self.gis_aspb_db.last_error}"
-                self.Avis(msg) if self.gis_aspb_db.last_error else sel.show_info(self.gis_aspb_db.last_msg)
+                msg = f"Error al actualitzar el tipus de via amb id: {id}\n\n{self.geocode_aspb_db.last_error}"
+                self.Avis(msg) if self.geocode_aspb_db.last_error else sel.show_info(self.geocode_aspb_db.last_msg)
         
         print("actualizacion completada")
 

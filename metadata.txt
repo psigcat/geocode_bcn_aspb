@@ -1,5 +1,5 @@
 [general]
-name=gis_aspb
+name=geocode_aspb
 qgisMinimumVersion=3.0
 description=Importa capas i calcular similituds
 version=0.1.1
