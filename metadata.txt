@@ -1,18 +1,19 @@
 [general]
-name=geocode_aspb
+name=Geocode ASPB
 qgisMinimumVersion=3.0
-description=Importa capas i calcular similituds
+qgisMaximumVersion=3.99
+description=Importar capas i calcular similituds
 version=0.1.1
 author=PSIG
 email=admin@psig.es
-tags=python
+tags=python, geocode, similarity
 category=Plugins
 icon=icones/icon.png
 experimental=False
 deprecated=False
 
 [app]
-database=gis_aspb
-service=gis_aspb
+database=aspb_geocode
+service=localhost_geocode
 schema=similitud
 carrerer=carrerer.adreces
