@@ -1,2 +1,2 @@
-# geocode_bcn_aspb
+# geocode_aspb
 Plugin per QGIS per geocodificar direcciones

@@ -6,7 +6,7 @@ from qgis.core import QgsProject, QgsVectorLayer, QgsProcessingFeedback
 from PyQt5.QtGui import QDoubleValidator
 import processing
 # Import the code for the dialog
-from .geocode_aspb_db import GisAspbDB
+from .geocode_aspb_db import GeocodeAspbDB
 from .geocode_aspb_dialog import geocode_aspbDialog
 import os.path
 import json
@@ -43,7 +43,7 @@ class geocode_aspb:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&geocode_aspb')
+        self.menu = self.tr(u'&Geocode ASPB')
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
@@ -153,7 +153,7 @@ class geocode_aspb:
         self.getLayersProjectActive()
 
         # Connect DDBB
-        self.geocode_aspb_db = GisAspbDB(self.plugin_dir)
+        self.geocode_aspb_db = GeocodeAspbDB(self.plugin_dir)
         self.geocode_aspb_db.LlegirConfig()
         self.db = self.geocode_aspb_db.ObrirBaseDades()
         if self.geocode_aspb_db.bd_open:
@@ -207,6 +207,7 @@ class geocode_aspb:
 
         # Get database connection parameters
         db_params = self.geocode_aspb_db.param
+        #database = db_params.get('database', '')
         database = db_params.get('database', '')
         schema = db_params.get('schema', '')
 

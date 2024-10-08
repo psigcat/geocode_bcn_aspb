@@ -4,7 +4,7 @@ import configparser
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 
 
-class GisAspbDB:
+class GeocodeAspbDB:
 
 	def __init__(self, plugin_dir):
 
@@ -66,7 +66,7 @@ class GisAspbDB:
 			self.last_error = "No s'ha definit ni host ni service"
 			return None
 
-		self.db = QSqlDatabase.addDatabase("QPSQL", "gis_aspb")
+		self.db = QSqlDatabase.addDatabase("QPSQL", self.param['database'])
 		if self.param["service"] == "":
 			self.db.setHostName(self.param["host"])
 			self.db.setDatabaseName(self.param["database"])
