@@ -1,16 +1,20 @@
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
-from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
+from qgis.PyQt.QtGui import QIcon, QStandardItem
 from qgis.PyQt.QtWidgets import QAction
 from PyQt5.QtWidgets import QMessageBox
 from qgis.core import QgsProject, QgsVectorLayer, QgsProcessingFeedback, Qgis
 from PyQt5.QtGui import QDoubleValidator
+from qgis.PyQt.QtSql import QSqlTableModel
+
+
 import processing
-# Import the code for the dialog
 from .geocode_aspb_db import GeocodeAspbDB
 from .geocode_aspb_dialog import geocode_aspbDialog
 import os.path
 import json
-#from geocodeaspb_utils import get_metadata_parameter
+
+
+RESULT_TABLE_FIELDS = ['tipusvia', 'adreca', 'num', 'similarity']
 
 
 class geocode_aspb:
@@ -136,20 +140,13 @@ class geocode_aspb:
         if self.first_start == True:
             self.first_start = False
             self.dlg = geocode_aspbDialog()
-            # Connect the import button to the import function
             self.dlg.import_button.clicked.connect(self.importLayer)
-            # Connect the signal currentIndexChanged of comboBox_selectTable to charge elements og the table
             self.dlg.comboBox_selectTable.currentIndexChanged.connect(self.chargeTableElements)
-            # Connect the cancel button to the cancel function
             self.dlg.cancelButton.clicked.connect(self.cleanFormCalc)
-            # Connect the acept button to the calc function
             self.dlg.aceptButton.clicked.connect(self.calcSimilarity)
-            # Set up the validator for spin_coef
-            # validator = QDoubleValidator(0.1, 0.999999, 6, self.dlg)
-            # validator.setNotation(QDoubleValidator.StandardNotation)
-            # self.dlg.spin_coef.setValidator(validator)
+            self.dlg.save_button.clicked.connect(self.saveResults)
 
-        # Call function 'getLayersProjectActive()'
+
         self.getLayersProjectActive()
 
         # Connect DDBB
@@ -241,7 +238,7 @@ class geocode_aspb:
             self.cleanFormImport()
             self.getTablesCalc()
         except Exception as e:
-            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(f"Error en importar la capa: {str(e)}"), level=Qgis.Error, duration=3)
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(f"Error en importar la capa: {str(e)}"), level=Qgis.Critical, duration=3)
 
 
     def cleanTable(self, table_name):
@@ -267,7 +264,7 @@ class geocode_aspb:
         rows = self.geocode_aspb_db.get_rows(sql)
         if rows is None:
             msg= f"Error en la carega de les taules\n\n{self.geocode_aspb_db.last_error}"
-            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Error, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Critical, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
             return
         
         self.dlg.comboBox_selectTable.addItem("","")
@@ -288,13 +285,14 @@ class geocode_aspb:
         self.dlg.comboBox_numPortal.clear()
 
         nombre_tabla = self.dlg.comboBox_selectTable.currentText()
-        sql = (f"SELECT column_name FROM information_schema.columns WHERE table_schema = 'similitud' "
+        schema = self.geocode_aspb_db.param.get('schema', '')
+        sql = (f"SELECT column_name FROM information_schema.columns WHERE table_schema = '{schema}' "
                f"AND table_name = '{nombre_tabla}';")
 
         rows = self.geocode_aspb_db.get_rows(sql)
         if rows is None:
             msg= f"Error en la carega dels elements de la tula\n\n{self.geocode_aspb_db.last_error}"
-            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Error, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Critical, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
             return
         
         self.dlg.comboBox_tipos.addItem("","")
@@ -381,13 +379,139 @@ class geocode_aspb:
         success = self.geocode_aspb_db.exec_sql(sql)
         if not success:
             msg = f"Error \n\n{self.geocode_aspb_db.last_error}"
-            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Error, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Critical, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
             print(self.geocode_aspb_db.last_error)
             return
         
         print("Query executed successfully.")
         self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr("El clacul a finalitzat"), level=Qgis.Success, duration=3)
         self.cleanFormCalc()
+        self.showResults(nombre_tabla)
+
+
+    def showResults(self, nombre_tabla):
+        """ Show results in table """
+
+        self.dlg.tabWidget.setCurrentIndex(2)
+        self.model = QSqlTableModel(db=self.db)
+        schema = self.geocode_aspb_db.param.get('schema', '')
+        self.model.setTable(f"{schema}.{nombre_tabla}")
+        self.model.setSort(3, Qt.DescendingOrder)
+        self.dlg.table_results.setModel(self.model)
+        self.model.select()
+
+        # hide columns
+        if RESULT_TABLE_FIELDS:
+            for i in range(self.model.columnCount()):
+                fieldname = self.model.headerData(i, Qt.Horizontal)
+                if fieldname not in RESULT_TABLE_FIELDS:
+                    self.dlg.table_results.setColumnHidden(i, True)
+
+        # set width columns
+        field_index = self.model.fieldIndex('tipusvia')
+        self.dlg.table_results.setColumnWidth(field_index, 50)
+        field_index = self.model.fieldIndex('adreca')
+        self.dlg.table_results.setColumnWidth(field_index, 150)
+        field_index = self.model.fieldIndex('num')
+        self.dlg.table_results.setColumnWidth(field_index, 40)
+        field_index = self.model.fieldIndex('similarity')
+        self.dlg.table_results.setColumnWidth(field_index, 80)
+
+        # add columns approve and evaluation
+        # item0 = QStandardItem(True);
+        # item0.setCheckable(True);
+        # item0.setCheckState(Qt.Checked);
+        # item0.setText("aprobacio");
+        # self.model.insertColumn(item0)
+
+
+    def saveResults(self):
+        """ Save results to table  """
+
+        values = "DEFAULT,"
+        model = self.dlg.table_results.model()
+        #for i in range(0, model.rowCount()):
+            #row = model.record(i)
+
+        row = model.record(0)
+
+        # geom
+        geom = row.field('geom').value()
+        if geom:
+            values += (f"\'{geom}\',")
+        else:
+            values += 'NULL,'
+
+        # adressa_entrada_tipo_via
+        tipusvia = row.field('tipusvia').value()
+        if tipusvia:
+            values += (f"'{tipusvia}',")
+        else:
+            values += 'NULL,'
+            tipusvia = ''
+
+        # adressa_entrada_nom_via
+        adreca = row.field('adreca').value()
+        if adreca:
+            values += (f"'{adreca}',")
+        else:
+            values += 'NULL,'
+            adreca = ''
+
+        # adressa_entrada_portal
+        num = row.field('num').value()
+        if num:
+            values += (f"'{num}',")
+        else:
+            values += 'NULL,'
+            num = ''
+
+        # adressa_entrada_completa
+        values += (f"'{tipusvia} {adreca} {num}',")
+
+        # adressa_trobada_completa
+        values += (f"'',")
+
+        # adressa_trobada_nom_via
+        values += (f"'',")
+
+        # adressa_trobada_portal
+        values += (f"'',")
+
+        # codi_geoad
+        values += (f"NULL,")
+
+        # usuari
+        values += (f"'',")
+
+        # valoracio
+        values += (f"NULL,")
+
+        # similarity
+        similarity = row.field('similarity').value()
+        if similarity:
+            values += (f"\'{similarity}\'")
+        else:
+            values += (f"NULL")
+
+        self.insertResultRecord(values)
+
+
+    def insertResultRecord(self, values):
+        """ insert record en result table """
+
+        sql = (f"INSERT INTO carrerer.geocode_valoracions VALUES ({values});")
+        print(sql)
+
+        success = self.geocode_aspb_db.exec_sql(sql)
+        if not success:
+            msg = f"Error \n\n{self.geocode_aspb_db.last_error}"
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Critical, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
+            print(self.geocode_aspb_db.last_error)
+            return
+        
+        print("Query executed successfully.")
+        self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr("Els dades han sido escrits a la base de dades"), level=Qgis.Success, duration=3)
 
 
     def checkTipos(self, colTipo, nombre_tabla):
@@ -398,7 +522,7 @@ class geocode_aspb:
         try: 
             diccionarioTipos = self.cargar_diccionarioTipos(file_path)
         except FileNotFoundError as e:
-            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(str(e)), level=Qgis.Error, duration=3)
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(str(e)), level=Qgis.Critical, duration=3)
             return
 
         sql = (f"SELECT id, {colTipo} FROM {nombre_tabla};")
@@ -406,7 +530,7 @@ class geocode_aspb:
         rows = self.geocode_aspb_db.get_rows(sql)
         if rows is None:
             msg= f"Error en la carega de la columna de tipus\n\n{self.geocode_aspb_db.last_error}"
-            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Error, duration=3)
+            self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Critical, duration=3)
             return 
         
         cambios = []
@@ -426,7 +550,7 @@ class geocode_aspb:
 
             if not success:
                 msg = f"Error al actualitzar el tipus de via amb id: {id}\n\n{self.geocode_aspb_db.last_error}"
-                self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Error, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
+                self.dlg.messageBar.pushMessage(self.tr("Error"), self.tr(msg), level=Qgis.Critical, duration=3) if self.geocode_aspb_db.last_error else self.dlg.messageBar.pushMessage(self.tr("Success"), self.tr(self.geocode_aspb_db.last_msg), level=Qgis.Success, duration=3)
         
         print("actualizacion completada")
 

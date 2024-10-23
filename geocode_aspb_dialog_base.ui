@@ -25,13 +25,13 @@
     </widget>
    </item>
    <item>
-    <widget class="QTabWidget" name="tabWidget_import">
+    <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
-     <widget class="QWidget" name="tab">
+     <widget class="QWidget" name="tab_import">
       <attribute name="title">
-       <string>Importar</string>
+       <string>Importació</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
@@ -108,9 +108,9 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_2">
+     <widget class="QWidget" name="tab_calc">
       <attribute name="title">
-       <string>Calcul</string>
+       <string>Calculo</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
@@ -151,7 +151,7 @@
        <item>
         <widget class="QLabel" name="label_tipo">
          <property name="text">
-          <string>Tipus</string>
+          <string>Tipus via</string>
          </property>
         </widget>
        </item>
@@ -228,6 +228,29 @@
         <widget class="QPushButton" name="aceptButton">
          <property name="text">
           <string>Calcular</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_result">
+      <attribute name="title">
+       <string>Valoracions</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QTableView" name="table_results"/>
+       </item>
+       <item>
+        <widget class="QPushButton" name="save_button">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Desar</string>
          </property>
         </widget>
        </item>
